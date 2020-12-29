@@ -1,4 +1,4 @@
-package com.github.mridul.kafka;
+package com.github.mridul.kafka.producer;
 
 import java.util.Properties;
 
@@ -7,6 +7,8 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 
+import com.github.mridul.kafka.utils.Constants;
+
 public class Producer {
 	
 	public static void main(String[] args) {
@@ -14,7 +16,7 @@ public class Producer {
 		
 		// create producer properties
 		Properties properties = new Properties();
-		properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+		properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, Constants.BOOTSTRAP_SERVER);
 		properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 		properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 		
