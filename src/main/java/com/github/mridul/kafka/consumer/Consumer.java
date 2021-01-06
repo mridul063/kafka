@@ -21,7 +21,7 @@ public class Consumer {
 	public static void main(String[] args) {
 
 		String group_id = "first_application";
-		String topic = "topic_1";
+		String topic = "test_topic";
 
 		// Consumer config
 		Properties properties = new Properties();

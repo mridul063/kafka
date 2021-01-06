@@ -8,19 +8,20 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.mridul.kafka.utils.Constants;
 
-public class ConsumerGroups {
+public class ConsumerWithAssignAndSeek {
 
-	private final static Logger logger = LoggerFactory.getLogger(ConsumerGroups.class);
+	private final static Logger logger = LoggerFactory.getLogger(ConsumerWithAssignAndSeek.class);
 
 	public static void main(String[] args) {
 
-		String group_id = "third_application";
+		String group_id = "first_application";
 		String topic = "test_topic";
 
 		// Consumer config
@@ -28,16 +29,22 @@ public class ConsumerGroups {
 		properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, Constants.BOOTSTRAP_SERVER);
 		properties.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
 		properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-		properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, group_id);
 		properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest"); // can be latest/earliest/none ,
 																						// none throws error if no
 																						// offsets are saved
 
 		// Create a consumer
 		KafkaConsumer<String, String> consumer = new KafkaConsumer<String, String>(properties);
+		
+		// assign and seek are mostly used to replay data or fetch a specific message
+		
+		// Assign 
+		TopicPartition partitionToReadFrom = new TopicPartition(topic, 0);
+		long offSetToReadFrom = 15L;
+		consumer.assign(Arrays.asList(partitionToReadFrom));
 
-		// Subscribe to the topic
-		consumer.subscribe(Arrays.asList(topic));
+		// Seek
+		consumer.seek(partitionToReadFrom, offSetToReadFrom);
 
 		// Poll new data
 		while (true) {
