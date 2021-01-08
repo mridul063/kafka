@@ -16,6 +16,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.client.RequestOptions;
@@ -28,7 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonParser;
 
-public class ElasticSearchConsumer {
+public class ElasticSearchConsumerWithBulkRequest {
 	
 	final static String BOOTSTRAP_SERVER = "localhost:9092";
 	
@@ -68,7 +70,7 @@ public class ElasticSearchConsumer {
 																						// offsets are saved
 		
 		properties.setProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false"); // disable auto commit of offsets
-		properties.setProperty(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, "10"); // disable auto commit of offsets
+		properties.setProperty(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, "100"); // disable auto commit of offsets
 
 		// Create a consumer
 		KafkaConsumer<String, String> consumer = new KafkaConsumer<String, String>(properties);
@@ -80,7 +82,7 @@ public class ElasticSearchConsumer {
 	
 	public static void main(String[] args) throws IOException {
 
-		Logger logger = LoggerFactory.getLogger(ElasticSearchConsumer.class.getName());
+		Logger logger = LoggerFactory.getLogger(ElasticSearchConsumerWithBulkRequest.class.getName());
 
 		RestHighLevelClient client = createClient();
 
@@ -95,6 +97,8 @@ public class ElasticSearchConsumer {
 			
 			logger.info("Received " + records.count() + " records");
 			
+			BulkRequest bulkRequest = new BulkRequest();
+			
 			for (ConsumerRecord<String, String> record : records) {
 				// 2 strategies
                 // kafka generic ID
@@ -102,24 +106,28 @@ public class ElasticSearchConsumer {
 
                 // twitter feed specific id
 				String twitterId = extractIdFromTweet(record.value());
+				logger.info(twitterId);
 				
 				// insert data into elastic search
 				IndexRequest indexRequest = new IndexRequest("twitter").source(record.value(), XContentType.JSON)
 						.id(twitterId); // this is to make our consumer idempotent
 				
-				IndexResponse indexResponse = client.index(indexRequest, RequestOptions.DEFAULT);
-				String id = indexResponse.getId();
-				logger.info(id);
-				try {
-					Thread.sleep(10);
-				} catch (InterruptedException ex) {
-					ex.printStackTrace();
-				}
-
+				bulkRequest.add(indexRequest);
 			}
-			logger.info("Committing offsets...");
-			kafkaConsumer.commitSync();
-            logger.info("Offsets have been committed");
+			
+			if (records.count() > 0) {
+				BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+
+				logger.info("Committing offsets...");
+				kafkaConsumer.commitSync();
+				logger.info("Offsets have been committed");
+				try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+			}
+			
 		}
 
 		// close the client gracefully
@@ -127,7 +135,7 @@ public class ElasticSearchConsumer {
 	}
 
 	private static String extractIdFromTweet(String recordJson) {
-		return JsonParser.parseString(recordJson).getAsJsonObject().get("id_str").toString();
+		return JsonParser.parseString(recordJson).getAsJsonObject().get("id_str").getAsString();
 	}
 
 }
